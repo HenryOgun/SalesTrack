@@ -5,9 +5,6 @@ on:
   push:
     branches: [main]
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,72 +19,27 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Accept Android SDK licenses (write files directly — no interactive prompts)
+      - name: Accept Android SDK licenses
         run: |
           mkdir -p "$ANDROID_HOME/licenses"
-          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n8933bad161af4408b5401b0f4d42e0df38c4c1f3" \
-            > "$ANDROID_HOME/licenses/android-sdk-license"
-          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" \
-            > "$ANDROID_HOME/licenses/android-sdk-preview-license"
-          echo -e "\n859f317696f67ef3d7f30a50a5560e7834b43903" \
-            > "$ANDROID_HOME/licenses/android-sdk-arm-dbt-license"
-          echo -e "\nd975f751698a77b662f1254ddbeed3901e976f5a" \
-            > "$ANDROID_HOME/licenses/intel-android-extra-license"
-          echo -e "\n33b6937b3b6b3b6b3b6b3b6b3b6b3b6b3b6b3b6" \
-            > "$ANDROID_HOME/licenses/google-gdk-license"
-          echo -e "\ne9acab5b5fbb560a72cfaecce8946896ff6aab9d" \
-            > "$ANDROID_HOME/licenses/android-googletv-license"
+          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n8933bad161af4408b5401b0f4d42e0df38c4c1f3" > "$ANDROID_HOME/licenses/android-sdk-license"
+          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > "$ANDROID_HOME/licenses/android-sdk-preview-license"
 
-      - name: Install Android SDK components
-        run: |
-          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f 2>/dev/null | head -1)
-          echo "Using sdkmanager: $SDKMANAGER"
-          echo "$(dirname $SDKMANAGER)" >> $GITHUB_PATH
-          "$SDKMANAGER" "build-tools;33.0.0" "platforms;android-33"
+      - name: Make gradlew executable
+        run: chmod +x gradlew
 
-      - name: Install Bubblewrap CLI
-        run: npm install -g @bubblewrap/cli
+      - name: Build signed APK
+        run: ./gradlew assembleRelease
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
 
-      - name: Pre-configure Bubblewrap (skip JDK/SDK prompts)
-        run: |
-          mkdir -p ~/.bubblewrap
-          echo "{\"jdkPath\":\"${JAVA_HOME}\",\"androidSdkPath\":\"${ANDROID_HOME}\"}" \
-            > ~/.bubblewrap/config.json
-          echo "Bubblewrap config:"
-          cat ~/.bubblewrap/config.json
-
-      - name: Generate signing keystore
-        run: |
-          keytool -genkeypair \
-            -keystore android.keystore \
-            -alias salestrack \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass salestrack \
-            -keypass salestrack \
-            -dname "CN=SalesTrack, O=DiamondFM, C=NG" \
-            -noprompt
-
-      - name: Init Android TWA project
-        # Config pre-set so no JDK/SDK prompts; Enter accepts all manifest defaults
-        run: printf '\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n' | bubblewrap init --manifest https://henryogun.github.io/salestrack/manifest.json
-
-      - name: Build APK
-        run: printf 'salestrack\nsalestrack\n' | bubblewrap build --skipPwaShellUpdate
-
-      - name: Find APK files
-        run: find . -name "*.apk" -not -path "*/node_modules/*" | head -20
+      - name: Find APK
+        run: find . -name "*.apk" -not -path "*/node_modules/*"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: SalesTrack-Android-APK
+          name: SalesTrack-APK
           path: "**/*.apk"
           if-no-files-found: warn
           retention-days: 30

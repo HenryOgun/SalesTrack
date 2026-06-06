@@ -527,6 +527,7 @@
 </style>
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body id="app-body">
@@ -1239,7 +1240,11 @@ function setupChannel() {
   if (FIREBASE_CONFIG.databaseURL && FIREBASE_CONFIG.apiKey) {
     try {
       const app = firebase.initializeApp(FIREBASE_CONFIG);
+      const auth = firebase.auth(app);
       db = firebase.database(app);
+      // Sign in with shared app credential so only this app can access the database
+      auth.signInWithEmailAndPassword('app@diamond-fm-salestrack.com', 'DFM@SalesTrack2026!')
+          .catch(e => console.warn('Firebase auth:', e));
       const ref = db.ref('sales');
       ref.on('value', snap => {
         const data = snap.val();
@@ -2284,8 +2289,8 @@ function buildSaleCard(s) {
       ${cs?`<span class="status-badge status-${cs.cls}">${cs.label}</span>`:''}
       ${renewIcon?`<span style="font-size:11px">${renewIcon}</span>`:''}
       ${creditBtn}
-      <button onclick="openEdit('${s.id}')" style="font-size:10px;color:var(--muted);background:none;border:1px solid var(--border);padding:1px 5px;border-radius:3px;cursor:pointer;line-height:1.4">&#9998;</button>
-      <button onclick="deleteSale('${s.id}')" style="font-size:10px;color:var(--red);background:none;border:1px solid var(--red);padding:1px 4px;border-radius:3px;cursor:pointer;line-height:1.4">&#128465;</button>
+      <button onclick="openEdit('${s.id}')" style="font-size:10px;font-weight:700;color:var(--accent);background:rgba(79,142,247,0.12);border:1px solid var(--accent);padding:1px 5px;border-radius:3px;cursor:pointer;line-height:1.4">&#9998;</button>
+      <button onclick="deleteSale('${s.id}')" style="font-size:10px;font-weight:700;color:var(--red);background:rgba(231,76,60,0.12);border:1px solid var(--red);padding:1px 4px;border-radius:3px;cursor:pointer;line-height:1.4">&#128465;</button>
     </div>
   </div>`;
 }

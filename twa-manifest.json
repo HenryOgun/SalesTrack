@@ -12,16 +12,16 @@
   "navigationDividerColorDark": "#000000",
   "backgroundColor": "#0F0F1A",
   "enableNotifications": true,
-  "startUrl": "/salestrack/salestrack.html",
+  "startUrl": "/salestrack/index.html",
   "iconUrl": "https://henryogun.github.io/salestrack/icon-512.png",
   "maskableIconUrl": "https://henryogun.github.io/salestrack/icon-512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
-    "path": "/Users/henryogun/soundmasterh1/soundmasterh1/code/airlog-pro/android.keystore",
+    "path": "/Users/henryogun/soundmasterh1/soundmasterh1/code/SalesTrack/android.keystore",
     "alias": "android"
   },
-  "appVersionName": "3",
-  "appVersionCode": 3,
+  "appVersionName": "4",
+  "appVersionCode": 4,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://henryogun.github.io/salestrack/manifest.json",
@@ -48,5 +48,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "3"
+  "appVersion": "4"
 }

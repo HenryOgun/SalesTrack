@@ -1206,7 +1206,7 @@ const FIREBASE_CONFIG = {
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
-let db = null;
+let db = null, _fbAuthed = false;
 function firebaseReady() { return db !== null; }
 
 let currentUser = null, sales = [], selectedMemberId = null;
@@ -1242,24 +1242,39 @@ function setupChannel() {
       const app = firebase.initializeApp(FIREBASE_CONFIG);
       const auth = firebase.auth(app);
       db = firebase.database(app);
-      // Sign in with shared app credential so only this app can access the database
-      auth.signInWithEmailAndPassword('app@diamond-fm-salestrack.com', 'DFM@SalesTrack2026!')
-          .catch(e => console.warn('Firebase auth:', e));
-      const ref = db.ref('sales');
-      ref.on('value', snap => {
-        const data = snap.val();
-        const incoming = data ? Object.values(data).sort((a,b)=>b.ts-a.ts) : [];
-        const hadNew = incoming.some(s => !sales.find(x => x.id === s.id));
-        sales = incoming;
-        saveSalesLocal();
-        if (document.getElementById('screen-app').classList.contains('active')) {
-          refreshAll();
-          if (hadNew && sales.length) { showNewSalePopup(sales[0]); showNotifyDot(); }
-        }
-      });
-      console.log('Firebase connected');
-      const ss = document.getElementById('sync-status');
-      if (ss) { ss.textContent = '● Live'; ss.style.color = '#2ecc71'; }
+
+      function _fbStartListeners() {
+        _fbAuthed = true;
+        const ss = document.getElementById('sync-status');
+        if (ss) { ss.textContent = '● Live'; ss.style.color = '#2ecc71'; }
+        // Sales listener — fires with all data now that auth is confirmed
+        db.ref('sales').on('value', snap => {
+          const data = snap.val();
+          const incoming = data ? Object.values(data).sort((a,b)=>b.ts-a.ts) : [];
+          const hadNew = incoming.some(s => !sales.find(x => x.id === s.id));
+          sales = incoming;
+          saveSalesLocal();
+          if (document.getElementById('screen-app').classList.contains('active')) {
+            refreshAll();
+            if (hadNew && sales.length) { showNewSalePopup(sales[0]); showNotifyDot(); }
+          }
+        });
+      }
+
+      // Try shared credential first; fall back to anonymous so sync always works
+      auth.signInWithEmailAndPassword('henryoogun@gmail.com', 'DFM@SalesTrack2026!')
+          .catch(e => {
+            console.warn('Firebase email auth failed, trying anonymous:', e.code);
+            return auth.signInAnonymously();
+          })
+          .then(() => _fbStartListeners())
+          .catch(e => {
+            console.warn('Firebase auth failed entirely:', e);
+            const ss = document.getElementById('sync-status');
+            if (ss) { ss.textContent = '● Offline'; ss.style.color = '#e74c3c'; }
+          });
+
+      console.log('Firebase connecting...');
       return;
     } catch(e) { console.warn('Firebase init failed, using local mode', e);
       const ss = document.getElementById('sync-status');
@@ -1289,10 +1304,17 @@ function setupChannel() {
 function loadSales() { loadSalesLocal(); }
 function saveSales() {
   saveSalesLocal();
+  // NOTE: Firebase writes use per-record operations (fbWriteSale/fbRemoveSale)
+  // to avoid race conditions from overwriting the entire collection.
+}
+function fbWriteSale(sale) {
   if (firebaseReady()) {
-    const salesObj = {};
-    sales.forEach(s => { salesObj[s.id] = s; });
-    db.ref('sales').set(salesObj).catch(e => console.warn('Firebase write error', e));
+    db.ref('sales/' + sale.id).set(sale).catch(e => console.warn('Firebase write error', e));
+  }
+}
+function fbRemoveSale(id) {
+  if (firebaseReady()) {
+    db.ref('sales/' + id).remove().catch(e => console.warn('Firebase delete error', e));
   }
 }
 function broadcast(type, payload) {
@@ -1762,7 +1784,7 @@ var editRenewal = '';
 function deleteSale(id) {
   if (!confirm('Delete this sale? This cannot be undone.')) return;
   sales = sales.filter(function(s){ return s.id !== id; });
-  saveSales();
+  saveSales(); fbRemoveSale(id);
   broadcast('DELETE_SALE', { id: id });
   refreshAll();
   toast('Sale deleted');
@@ -1801,7 +1823,7 @@ function confirmPayCredit() {
   s.paidAt  = Date.now();
   s.paidNote = note;
   s.edited   = true;
-  saveSales();
+  saveSales(); fbWriteSale(s);
   broadcast('NEW_SALE', { sale: s });
   closePayModal();
   refreshAll();
@@ -2057,7 +2079,7 @@ function saveEdit() {
     notes:     document.getElementById('e-notes').value.trim(),
     edited:    true
   });
-  saveSales();
+  saveSales(); fbWriteSale(sales[idx]);
   broadcast('NEW_SALE', { sale: sales[idx] });
   writeAdLog('edited', sales[idx], oldSale);
   closeEdit();
@@ -2176,7 +2198,7 @@ function submitSale() {
     startDate, endDate, amount, payment, agency, renewal, notes,
     ts: Date.now(), isNew: true
   };
-  sales.unshift(sale); saveSales(); broadcast('NEW_SALE', { sale });
+  sales.unshift(sale); saveSales(); fbWriteSale(sale); broadcast('NEW_SALE', { sale });
   writeAdLog('logged', sale);
   ['f-client','f-product','f-notes','f-agency'].forEach(id => document.getElementById(id).value = '');
   ['f-package','f-duration','f-payment'].forEach(id => document.getElementById(id).value = '');
@@ -2230,8 +2252,11 @@ function renderFeed() {
   const now = Date.now();
   const todayStr = new Date().toISOString().slice(0,10);
   let filtered = sales.filter(s => {
-    // Hide ended sales from main feed
-    if (s.endDate && s.endDate < todayStr) return false;
+    // Hide sales that ended more than 30 days ago (keep recent ones visible)
+    if (s.endDate && s.endDate < todayStr) {
+      const daysSinceEnd = (Date.now() - new Date(s.endDate).getTime()) / 86400000;
+      if (daysSinceEnd > 30) return false;
+    }
     if (currentFeedFilter === 'Cash')     return s.payment === 'Cash';
     if (currentFeedFilter === 'Transfer') return s.payment === 'Transfer';
     if (currentFeedFilter === 'Credit')   return s.payment === 'Credit';

@@ -12,7 +12,7 @@
   "navigationDividerColorDark": "#000000",
   "backgroundColor": "#0F0F1A",
   "enableNotifications": true,
-  "startUrl": "/salestrack/index.html",
+  "startUrl": "/SalesTrack/index.html",
   "iconUrl": "https://henryogun.github.io/salestrack/icon-512.png",
   "maskableIconUrl": "https://henryogun.github.io/salestrack/icon-512.png",
   "splashScreenFadeOutDuration": 300,
@@ -20,8 +20,8 @@
     "path": "/Users/henryogun/soundmasterh1/soundmasterh1/code/SalesTrack/android.keystore",
     "alias": "android"
   },
-  "appVersionName": "4",
-  "appVersionCode": 4,
+  "appVersionName": "5",
+  "appVersionCode": 5,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://henryogun.github.io/salestrack/manifest.json",
@@ -48,5 +48,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "4"
+  "appVersion": "5"
 }

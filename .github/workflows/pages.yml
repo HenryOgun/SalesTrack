@@ -23,11 +23,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare web files
+        run: |
+          mkdir -p _site
+          cp salestrack.html _site/
+          cp sw.js _site/
+          cp manifest.json _site/
+          cp icon-192.png _site/
+          cp icon-512.png _site/
+          cp store_icon.png _site/
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          path: '_site'
 
       - id: deployment
         uses: actions/deploy-pages@v4

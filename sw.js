@@ -1,4 +1,4 @@
-const CACHE = 'salestrack-v7';
+const CACHE = 'salestrack-v8';
 const ASSETS = ['./salestrack.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
